@@ -356,6 +356,18 @@ function initAudio() {
     }
     audioCtx = new AC();
 
+    // === iOS / Telegram WebView UNLOCK ===
+    // On iOS Safari and Telegram, AudioContext stays muted until a short
+    // sound is actually produced from inside a user gesture. Play a 1-sample
+    // silent buffer right now to unlock the audio pipeline.
+    try {
+      const buffer = audioCtx.createBuffer(1, 1, 22050);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(audioCtx.destination);
+      src.start(0);
+    } catch (e) {}
+
     masterGain = audioCtx.createGain();
     masterGain.gain.value = 0.9;
     masterGain.connect(audioCtx.destination);
@@ -1132,13 +1144,16 @@ function renderKeyboard() {
     }
 
     const startHandler = (e) => {
-      e.preventDefault();
-      initAudio();
-      resumeAudio();
+      try { e.preventDefault(); } catch (err) {}
+      // Synchronous resume on iOS — must be inside the gesture handler.
+      if (!audioCtx) initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
       triggerKey(k.id, k.freq);
     };
     const endHandler = (e) => {
-      if (e) e.preventDefault();
+      if (e) { try { e.preventDefault(); } catch (err) {} }
       releaseKey(k.id);
     };
 
@@ -1249,12 +1264,15 @@ function renderGlucophone() {
 
     // Pointer events on the path itself.
     const onDown = (e) => {
-      e.preventDefault();
-      initAudio();
+      try { e.preventDefault(); } catch (err) {}
+      if (!audioCtx) initAudio();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
       triggerKey(k.id, k.freq);
     };
     const onUp = (e) => {
-      e.preventDefault();
+      try { e.preventDefault(); } catch (err) {}
       releaseKey(k.id);
     };
     path.addEventListener('mousedown', onDown);
@@ -1386,27 +1404,56 @@ window.addEventListener('keyup', (e) => {
 
 // --- UI Event Listeners ---
 
-// Start button: try several event types so it works across browsers + Telegram WebView.
-// AudioContext must be created/resumed inside a user gesture handler — that's the whole point.
+// Start button: must initialize AudioContext SYNCHRONOUSLY inside a user
+// gesture handler. On iOS Safari / Telegram WebView, anything async (even
+// a microtask delay) can cause the context to stay muted forever.
 let startActivated = false;
-function activateStart() {
+function activateStart(e) {
+  if (e) {
+    try { e.preventDefault(); } catch (err) {}
+    try { e.stopPropagation(); } catch (err) {}
+  }
   if (startActivated) return;
   startActivated = true;
+
+  // 1. Init audio synchronously in this gesture.
   initAudio();
-  resumeAudio();
+  // 2. Resume if iOS started it suspended.
+  if (audioCtx && audioCtx.state === 'suspended') {
+    audioCtx.resume().catch(() => {});
+  }
+  // 3. Audible "ready" ping — proves audio is alive. ~80ms soft sine.
+  //    If you can hear this, all keypresses will work too.
+  if (audioCtx) {
+    try {
+      const now = audioCtx.currentTime;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = 'sine';
+      o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.start(now);
+      o.stop(now + 0.22);
+    } catch (err) {
+      console.warn('Start ping failed:', err);
+    }
+  }
+
+  // 4. Show main screen.
   startScreen.classList.remove('active');
   mainScreen.classList.add('active');
   checkOrientation();
 }
+
+// touchstart fires FIRST on iOS and is the most reliable gesture for
+// unlocking audio. pointerdown covers modern WebViews. click is fallback.
+startBtn.addEventListener('touchstart', activateStart, { passive: false });
+startBtn.addEventListener('pointerdown', activateStart);
 startBtn.addEventListener('click', activateStart);
-startBtn.addEventListener('touchend', (e) => {
-  e.preventDefault();
-  activateStart();
-}, { passive: false });
-startBtn.addEventListener('pointerup', (e) => {
-  // Pointer events fire on most modern WebViews.
-  activateStart();
-});
 
 function applyPreset(name) {
   const p = PRESETS[name];
