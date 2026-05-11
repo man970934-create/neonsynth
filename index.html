@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Neon Synth Simulator</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Rotate hint for very narrow screens -->
+  <div id="rotate-hint" class="screen">
+    <div class="rotate-box">
+      <h1>Rotate Your Phone</h1>
+      <p>For the best synth experience, please rotate to landscape.</p>
+    </div>
+  </div>
+
+  <!-- Start screen -->
+  <div id="start-screen" class="screen active">
+    <h1>Neon Synth Simulator</h1>
+    <p class="subtitle">Advanced Arcade Synth</p>
+    <button id="start-btn">Start</button>
+  </div>
+
+  <!-- Main synth screen -->
+  <div id="main-screen" class="screen">
+    <!-- HUD -->
+    <div class="hud">
+      <div class="hud-left">
+        <div class="hud-item"><span class="hud-label">Score</span><span id="score" class="hud-value">0</span></div>
+        <div class="hud-item"><span class="hud-label">Level</span><span id="level" class="hud-value">1</span></div>
+        <div class="hud-item"><span class="hud-label">Streak</span><span id="streak" class="hud-value">0</span></div>
+      </div>
+      <div class="hud-center">
+        <div class="mode-badge" id="mode-badge">Free Play</div>
+        <div class="target-panel">
+          <div class="target-label">Target</div>
+          <div id="target-display" class="target-value">-</div>
+          <div id="target-steps" class="target-steps"></div>
+        </div>
+      </div>
+      <div class="hud-right">
+        <div class="hud-item"><span class="hud-label">Mode</span><span id="game-mode" class="hud-value">Melody</span></div>
+        <div class="hud-item"><span class="hud-label">Preset</span><span id="preset-name" class="hud-value">Neon Synth</span></div>
+      </div>
+    </div>
+
+    <!-- Game buttons -->
+    <div class="game-buttons">
+      <button id="new-melody-btn">New Melody</button>
+      <button id="play-melody-btn">Play Melody</button>
+      <button id="reset-score-btn">Reset Score</button>
+      <button id="reset-level-btn">Reset Level</button>
+    </div>
+
+    <!-- Synth controls -->
+    <div class="controls">
+      <div class="control-group">
+        <label for="preset">Instrument</label>
+        <select id="preset">
+          <option value="neon">Neon Synth</option>
+          <option value="piano">Classic Piano</option>
+          <option value="pad">Soft Pad</option>
+          <option value="bass">Bass</option>
+          <option value="lead">Lead</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="game-mode-select">Game Mode</label>
+        <select id="game-mode-select">
+          <option value="free">Free Play</option>
+          <option value="melody">Melody Mode</option>
+          <option value="chord">Chord Mode</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="waveform">Waveform</label>
+        <select id="waveform">
+          <option value="sine">Sine</option>
+          <option value="square">Square</option>
+          <option value="sawtooth">Sawtooth</option>
+          <option value="triangle">Triangle</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label for="volume">Volume</label>
+        <input type="range" id="volume" min="0" max="1" step="0.01" value="0.5">
+      </div>
+      <div class="control-group">
+        <label for="attack">Attack</label>
+        <input type="range" id="attack" min="0" max="2" step="0.01" value="0.05">
+      </div>
+      <div class="control-group">
+        <label for="release">Release</label>
+        <input type="range" id="release" min="0" max="3" step="0.01" value="0.3">
+      </div>
+      <div class="control-group">
+        <label for="sustain">Sustain</label>
+        <input type="range" id="sustain" min="0" max="1" step="0.01" value="0.7">
+      </div>
+      <div class="control-group">
+        <label for="filter-cutoff">Filter Cutoff</label>
+        <input type="range" id="filter-cutoff" min="20" max="20000" step="10" value="8000">
+      </div>
+      <div class="control-group">
+        <label for="resonance">Resonance</label>
+        <input type="range" id="resonance" min="0" max="20" step="0.1" value="1">
+      </div>
+      <div class="control-group">
+        <label for="delay-amount">Delay</label>
+        <input type="range" id="delay-amount" min="0" max="0.8" step="0.01" value="0.2">
+      </div>
+      <div class="control-group">
+        <label for="vibrato">Vibrato</label>
+        <input type="range" id="vibrato" min="0" max="10" step="0.1" value="0">
+      </div>
+      <div class="control-group">
+        <label for="detune">Detune</label>
+        <input type="range" id="detune" min="0" max="50" step="1" value="0">
+      </div>
+      <div class="control-group">
+        <label for="reverb-amount">Reverb</label>
+        <input type="range" id="reverb-amount" min="0" max="0.9" step="0.01" value="0.3">
+      </div>
+      <div class="control-group">
+        <label for="keyboard-scale">Keyboard Scale</label>
+        <input type="range" id="keyboard-scale" min="70" max="140" step="1" value="100">
+      </div>
+    </div>
+
+    <!-- Keyboard wrapper with horizontal scroll -->
+    <div class="keyboard-wrapper">
+      <div class="keyboard" id="keyboard"></div>
+    </div>
+
+    <!-- Keyboard hint -->
+    <div class="kb-hint">Keys: A W S E D F T G Y H U J (middle octave)</div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
