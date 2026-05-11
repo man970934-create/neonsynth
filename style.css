@@ -1,0 +1,784 @@
+/* ==========================================================
+   Neon Synth Simulator — Liquid Glass / Glassmorphism Theme
+   ========================================================== */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  background: #050510;
+  color: #ffffff;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  min-height: 100vh;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Soft layered background — kept light to not tax WebView. */
+body {
+  background:
+    radial-gradient(1100px 700px at 12% 10%,  rgba(0, 255, 255, 0.10) 0%, transparent 55%),
+    radial-gradient(900px 600px  at 88% 25%,  rgba(255, 0, 255, 0.10) 0%, transparent 55%),
+    radial-gradient(900px 600px  at 50% 95%,  rgba(140, 90, 255, 0.10) 0%, transparent 60%),
+    #050510;
+  background-attachment: fixed;
+  overflow-x: hidden;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* --- Screen handling --- */
+.screen {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100%;
+  padding: 10px;
+}
+.screen.active {
+  display: flex;
+}
+
+/* --- Rotate hint banner (non-blocking) --- */
+.rotate-banner {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 8px 16px;
+  background: rgba(0, 255, 255, 0.10);
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  border-radius: 999px;
+  color: #d6f7ff;
+  font-size: 0.78rem;
+  letter-spacing: 0.5px;
+  z-index: 200;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 6px 24px rgba(0, 255, 255, 0.15);
+  display: none;
+  pointer-events: none;
+}
+.rotate-banner.visible {
+  display: block;
+}
+
+/* --- Start screen --- */
+#start-screen h1 {
+  font-size: 3rem;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  color: #b9faff;
+  text-shadow:
+    0 0 10px rgba(0, 255, 255, 0.6),
+    0 0 28px rgba(0, 255, 255, 0.4),
+    0 0 56px rgba(0, 180, 200, 0.3);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+#start-screen .subtitle {
+  font-size: 1.05rem;
+  color: #f5b3ff;
+  text-shadow: 0 0 8px rgba(255, 0, 255, 0.5);
+  margin-bottom: 36px;
+  letter-spacing: 2px;
+}
+
+#start-btn {
+  position: relative;
+  padding: 16px 60px;
+  font-size: 1.25rem;
+  background: linear-gradient(180deg, rgba(255, 0, 255, 0.18), rgba(255, 0, 255, 0.06));
+  border: 1px solid rgba(255, 0, 255, 0.55);
+  color: #ffdaff;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  cursor: pointer;
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    0 0 22px rgba(255, 0, 255, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+  z-index: 50;
+  touch-action: manipulation;
+}
+#start-btn:hover, #start-btn:active {
+  background: linear-gradient(180deg, rgba(255, 0, 255, 0.32), rgba(255, 0, 255, 0.12));
+  box-shadow:
+    0 0 36px rgba(255, 0, 255, 0.55),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -8px 22px rgba(0, 0, 0, 0.25);
+  transform: translateY(1px);
+}
+
+/* --- Main screen --- */
+#main-screen {
+  justify-content: flex-start;
+  padding-top: 6px;
+  padding-bottom: 14px;
+  min-height: 100vh;
+}
+
+/* --- Glass panel base --- */
+.hud,
+.controls,
+.lane-wrapper {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 8px 28px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+
+/* --- HUD --- */
+.hud {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 10px 16px;
+}
+
+.hud-left, .hud-right {
+  display: flex;
+  gap: 14px;
+}
+
+.hud-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.hud-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.hud-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #9aa3b2;
+}
+
+.hud-value {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #b9faff;
+  text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+}
+
+#score  { color: #ffb5ff; text-shadow: 0 0 8px rgba(255, 0, 255, 0.5); }
+#level  { color: #b9ffc4; text-shadow: 0 0 8px rgba(0, 255, 100, 0.4); }
+#streak { color: #fff7a8; text-shadow: 0 0 8px rgba(255, 220, 50, 0.4); }
+
+.mode-badge {
+  padding: 3px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 255, 255, 0.55);
+  background: rgba(0, 255, 255, 0.08);
+  color: #d6f7ff;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 0 10px rgba(0, 255, 255, 0.18);
+}
+
+.target-panel { text-align: center; }
+
+.target-label {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  color: #9aa3b2;
+  letter-spacing: 1px;
+}
+
+.target-value {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #d6f7ff;
+  text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+  min-height: 30px;
+  transition: color 0.2s;
+}
+
+.target-steps {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+  margin-top: 3px;
+  min-height: 20px;
+  flex-wrap: wrap;
+}
+
+.step-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: 0.2s;
+}
+.step-dot.active  { background: #0ff; box-shadow: 0 0 8px #0ff; border-color: #0ff; }
+.step-dot.correct { background: #4afc8a; box-shadow: 0 0 8px #4afc8a; border-color: #4afc8a; }
+.step-dot.wrong   { background: #ff6266; box-shadow: 0 0 8px #ff6266; border-color: #ff6266; }
+
+/* --- Game buttons --- */
+.game-buttons {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.game-buttons button,
+.melody-preset-bar button {
+  padding: 8px 16px;
+  background: linear-gradient(180deg, rgba(0, 255, 255, 0.12), rgba(0, 255, 255, 0.04));
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  color: #d6f7ff;
+  border-radius: 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 1px;
+  transition: 0.2s;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  touch-action: manipulation;
+}
+
+.game-buttons button:hover,
+.game-buttons button:active,
+.melody-preset-bar button:hover,
+.melody-preset-bar button:active {
+  background: linear-gradient(180deg, rgba(0, 255, 255, 0.22), rgba(0, 255, 255, 0.08));
+  box-shadow:
+    0 4px 18px rgba(0, 255, 255, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+#reset-score-btn {
+  border-color: rgba(255, 110, 120, 0.5);
+  color: #ffd0d2;
+  background: linear-gradient(180deg, rgba(255, 80, 100, 0.14), rgba(255, 80, 100, 0.04));
+}
+#reset-score-btn:hover, #reset-score-btn:active {
+  background: linear-gradient(180deg, rgba(255, 80, 100, 0.26), rgba(255, 80, 100, 0.1));
+  box-shadow: 0 4px 18px rgba(255, 90, 100, 0.35);
+}
+
+#reset-level-btn {
+  border-color: rgba(255, 180, 100, 0.5);
+  color: #ffe4c2;
+  background: linear-gradient(180deg, rgba(255, 170, 85, 0.14), rgba(255, 170, 85, 0.04));
+}
+#reset-level-btn:hover, #reset-level-btn:active {
+  background: linear-gradient(180deg, rgba(255, 170, 85, 0.26), rgba(255, 170, 85, 0.1));
+  box-shadow: 0 4px 18px rgba(255, 170, 85, 0.35);
+}
+
+.melody-preset-bar button {
+  background: linear-gradient(180deg, rgba(255, 0, 255, 0.14), rgba(255, 0, 255, 0.04));
+  border-color: rgba(255, 0, 255, 0.45);
+  color: #ffdaff;
+}
+.melody-preset-bar button:hover,
+.melody-preset-bar button:active {
+  background: linear-gradient(180deg, rgba(255, 0, 255, 0.26), rgba(255, 0, 255, 0.1));
+  box-shadow: 0 4px 18px rgba(255, 0, 255, 0.35);
+}
+
+/* --- Melody preset bar --- */
+.melody-preset-bar {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.melody-preset-bar .control-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.melody-preset-bar .control-group label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: #9aa3b2;
+  letter-spacing: 1px;
+}
+
+.melody-preset-bar select {
+  background: rgba(255, 255, 255, 0.05);
+  color: #d6f7ff;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  padding: 5px 10px;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  min-width: 140px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+/* --- Falling notes lane --- */
+.lane-wrapper {
+  width: 100%;
+  max-width: 1100px;
+  height: 160px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 8px;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.25)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+  pointer-events: none;
+}
+
+.lane-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.falling-note {
+  position: absolute;
+  top: 0;
+  border-radius: 4px;
+  opacity: 0.9;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.falling-note.white-lane {
+  background: linear-gradient(180deg, rgba(0, 255, 255, 0.25) 0%, rgba(0, 255, 255, 0.85) 100%);
+  border: 1px solid rgba(0, 255, 255, 0.8);
+  box-shadow: 0 0 12px rgba(0, 255, 255, 0.6);
+}
+
+.falling-note.black-lane {
+  background: linear-gradient(180deg, rgba(255, 0, 255, 0.25) 0%, rgba(255, 0, 255, 0.85) 100%);
+  border: 1px solid rgba(255, 0, 255, 0.8);
+  box-shadow: 0 0 12px rgba(255, 0, 255, 0.55);
+}
+
+/* --- Controls --- */
+.controls {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  padding: 12px;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 85px;
+}
+
+.control-group label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #9aa3b2;
+}
+
+.control-group select {
+  background: rgba(255, 255, 255, 0.05);
+  color: #d6f7ff;
+  border: 1px solid rgba(0, 255, 255, 0.4);
+  padding: 4px 8px;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+  font-size: 0.78rem;
+  min-width: 90px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.control-group input[type="range"] {
+  width: 95px;
+  accent-color: #0ff;
+}
+
+/* --- Keyboard wrapper --- */
+.keyboard-wrapper {
+  width: 100%;
+  max-width: 1100px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
+}
+
+.keyboard-wrapper::-webkit-scrollbar { height: 6px; }
+.keyboard-wrapper::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+.keyboard-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.5);
+  border-radius: 3px;
+}
+
+/* --- Keyboard --- */
+.keyboard {
+  position: relative;
+  display: flex;
+  justify-content: flex-start;
+  user-select: none;
+  -webkit-user-select: none;
+  height: 200px;
+}
+
+.key {
+  position: relative;
+  border-radius: 0 0 8px 8px;
+  cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.15s ease, background 0.15s ease;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 6px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  flex-shrink: 0;
+  touch-action: none;
+}
+
+.key span {
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.key .note-name  { font-size: 0.95em; }
+.key .octave-num { font-size: 0.7em; opacity: 0.7; }
+.key .key-hint   { font-size: 0.6em; opacity: 0.55; margin-top: 1px; color: #0ff; }
+
+/* White keys (default = classic) */
+.key.white {
+  width: 56px;
+  height: 100%;
+  background: linear-gradient(180deg, #f7f9fc 0%, #e2e6ee 100%);
+  border: 1px solid #aab1bd;
+  border-top: none;
+  color: #222;
+  z-index: 1;
+  box-shadow:
+    inset 0 -6px 10px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* Black keys (default = classic) */
+.key.black {
+  width: 36px;
+  height: 60%;
+  background: linear-gradient(180deg, #353a44 0%, #0c0e14 100%);
+  border: 1px solid #000;
+  border-top: none;
+  color: #b9faff;
+  position: absolute;
+  top: 0;
+  z-index: 2;
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+/* --- Active states --- */
+.key.white.active {
+  background: linear-gradient(180deg, #e6feff 0%, #b8f6fb 100%);
+  box-shadow:
+    0 0 26px rgba(0, 255, 255, 0.85),
+    inset 0 0 14px rgba(0, 255, 255, 0.6);
+  border-color: #5cf0ff;
+  transform: translateY(3px);
+}
+
+.key.black.active {
+  background: linear-gradient(180deg, #2a1f3a 0%, #150b22 100%);
+  box-shadow:
+    0 0 26px rgba(255, 0, 255, 0.85),
+    inset 0 0 14px rgba(255, 0, 255, 0.6);
+  border-color: #ff6cff;
+  transform: translateY(3px);
+}
+
+/* --- Correct / wrong flash states --- */
+.key.white.correct {
+  background: linear-gradient(180deg, #d6ffe0 0%, #a8f5b8 100%);
+  box-shadow: 0 0 26px rgba(74, 252, 138, 0.8), inset 0 0 14px rgba(74, 252, 138, 0.5);
+  border-color: #4afc8a;
+}
+.key.black.correct {
+  box-shadow: 0 0 26px rgba(74, 252, 138, 0.8), inset 0 0 14px rgba(74, 252, 138, 0.5);
+  border-color: #4afc8a;
+}
+.key.white.wrong {
+  background: linear-gradient(180deg, #ffd8da 0%, #ffacaf 100%);
+  box-shadow: 0 0 26px rgba(255, 80, 90, 0.8), inset 0 0 14px rgba(255, 80, 90, 0.5);
+  border-color: #ff6266;
+}
+.key.black.wrong {
+  box-shadow: 0 0 26px rgba(255, 80, 90, 0.8), inset 0 0 14px rgba(255, 80, 90, 0.5);
+  border-color: #ff6266;
+}
+
+/* ==========================================================
+   Keyboard themes by level — progressive neon
+   ========================================================== */
+
+/* Level 1-2 (theme-l1): classic — uses base styles. */
+
+/* Level 3-4: soft cyan/violet edge accent. */
+.keyboard.theme-l3 .key.white {
+  border-color: rgba(0, 255, 255, 0.35);
+  box-shadow:
+    inset 0 -6px 10px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 6px rgba(0, 255, 255, 0.15);
+}
+.keyboard.theme-l3 .key.black {
+  border-color: rgba(255, 0, 255, 0.35);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 6px rgba(255, 0, 255, 0.15);
+}
+
+/* Level 5-6: gentle neon gradient creeps in. */
+.keyboard.theme-l5 .key.white {
+  background: linear-gradient(180deg, #f6fbff 0%, #cfeaf1 100%);
+  border-color: rgba(0, 255, 255, 0.55);
+  box-shadow:
+    inset 0 -6px 10px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 12px rgba(0, 255, 255, 0.25);
+}
+.keyboard.theme-l5 .key.black {
+  background: linear-gradient(180deg, #2a1d3a 0%, #110a20 100%);
+  border-color: rgba(255, 0, 255, 0.55);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 12px rgba(255, 0, 255, 0.25);
+}
+
+/* Level 7+: cyber/neon — still clearly black/white. */
+.keyboard.theme-l7 .key.white {
+  background: linear-gradient(180deg, #e8fbff 0%, #9adee9 100%);
+  border-color: rgba(0, 255, 255, 0.85);
+  box-shadow:
+    inset 0 -6px 10px rgba(0, 0, 0, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 0 18px rgba(0, 255, 255, 0.45);
+}
+.keyboard.theme-l7 .key.black {
+  background: linear-gradient(180deg, #3a1e54 0%, #160922 100%);
+  border-color: rgba(255, 0, 255, 0.85);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.7),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 0 18px rgba(255, 0, 255, 0.45);
+}
+
+/* --- Keyboard hint text --- */
+.kb-hint {
+  font-size: 0.65rem;
+  color: #6f7686;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+/* ==========================================================
+   Glucophone (round instrument)
+   ========================================================== */
+.glucophone-wrapper {
+  width: 100%;
+  max-width: 1100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 12px;
+}
+
+.glucophone {
+  width: min(360px, 70vh);
+  max-width: 90vw;
+  aspect-ratio: 1 / 1;
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.gluco-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5));
+}
+
+.gluco-rim {
+  fill: rgba(60, 70, 90, 0.35);
+  stroke: rgba(0, 255, 255, 0.4);
+  stroke-width: 1.5;
+}
+
+.gluco-body {
+  fill: #1a1d28;
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 1;
+}
+
+.tongue {
+  fill: rgba(255, 255, 255, 0.06);
+  stroke: rgba(0, 255, 255, 0.45);
+  stroke-width: 1.2;
+  cursor: pointer;
+  transition: fill 0.12s ease, stroke 0.12s ease, filter 0.12s ease;
+}
+.tongue:hover {
+  fill: rgba(0, 255, 255, 0.12);
+}
+.tongue.active {
+  fill: rgba(0, 255, 255, 0.35);
+  stroke: rgba(0, 255, 255, 0.95);
+  filter: drop-shadow(0 0 12px rgba(0, 255, 255, 0.8));
+  animation: tonguePulse 0.4s ease-out;
+}
+.tongue.correct {
+  fill: rgba(74, 252, 138, 0.35);
+  stroke: rgba(74, 252, 138, 0.95);
+  filter: drop-shadow(0 0 12px rgba(74, 252, 138, 0.7));
+}
+.tongue.wrong {
+  fill: rgba(255, 80, 90, 0.3);
+  stroke: rgba(255, 80, 90, 0.95);
+  filter: drop-shadow(0 0 12px rgba(255, 80, 90, 0.7));
+}
+
+.tongue-label {
+  fill: #d6f7ff;
+  font-size: 14px;
+  font-weight: bold;
+  font-family: inherit;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+.gluco-center {
+  fill: #0e1018;
+  stroke: rgba(255, 0, 255, 0.4);
+  stroke-width: 1;
+}
+
+@keyframes tonguePulse {
+  0%   { transform: scale(1);    transform-origin: center; }
+  50%  { transform: scale(1.03); transform-origin: center; }
+  100% { transform: scale(1);    transform-origin: center; }
+}
+
+/* ==========================================================
+   Mobile adaptations
+   ========================================================== */
+@media (max-width: 768px) {
+  #start-screen h1 { font-size: 2.2rem; }
+  #start-screen .subtitle { font-size: 0.95rem; }
+
+  .hud { padding: 8px; gap: 6px; }
+  .hud-value { font-size: 1.05rem; }
+  .target-value { font-size: 1.1rem; }
+
+  .lane-wrapper { height: 110px; }
+
+  .controls { gap: 8px; padding: 8px; }
+  .control-group { min-width: 70px; }
+  .control-group input[type="range"] { width: 80px; }
+
+  .keyboard { height: 160px; }
+  .key.white { width: 48px; }
+  .key.black { width: 30px; }
+}
+
+@media (max-width: 480px) {
+  .hud-left, .hud-right { gap: 8px; }
+  .hud-value { font-size: 0.95rem; }
+  .target-value { font-size: 1rem; }
+
+  .lane-wrapper { height: 90px; }
+
+  .keyboard { height: 130px; }
+  .key.white { width: 42px; font-size: 0.65rem; }
+  .key.black { width: 26px; font-size: 0.55rem; padding-bottom: 3px; }
+
+  .game-buttons button,
+  .melody-preset-bar button { padding: 6px 12px; font-size: 0.65rem; }
+
+  .tongue-label { font-size: 12px; }
+}
+
+/* Landscape on phones — keys must fit comfortably. */
+@media (max-height: 480px) and (orientation: landscape) {
+  #main-screen { padding-top: 4px; padding-bottom: 6px; }
+  .hud { padding: 6px 10px; margin-bottom: 4px; }
+  .hud-value { font-size: 1rem; }
+  .lane-wrapper { height: 80px; margin-bottom: 4px; }
+  .controls { padding: 6px; gap: 6px; margin-bottom: 4px; }
+  .keyboard { height: 120px; }
+  .key.white { width: 44px; }
+  .key.black { width: 28px; }
+  .glucophone { width: min(220px, 60vh); }
+}
